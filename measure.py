@@ -12,7 +12,7 @@ img_dir = './image/'
 save_dir = '/dev/shm/measure/'
 
 is_debug = True
-is_save = False
+is_save = True
 
 def im_draw(title,im):
     if not is_debug:
@@ -360,19 +360,19 @@ if __name__ == '__main__':
         save_dir = sys.argv[2]
         if save_dir[-1:] != '/':
             save_dir += '/'
+
+        if not os.path.exists(save_dir):
+            os.system('mkdir ' + save_dir)
+        else:
+            os.system('rm ' + save_dir + '* 2>/dev/null')
+
         if not os.path.isdir(save_dir):
             print(save_dir + ' is not a folder')
             sys.exit(3)
+
         is_save = True
 
-
     img_list = os.listdir(img_dir)
-    if not os.path.exists(save_dir):
-        os.system('mkdir ' + save_dir)
-    else:
-        os.system('rm ' + save_dir + '* 2>/dev/null')
-
-
     for fname in img_list:
         if fname[-4:]=='.jpg' or fname[-4:]=='.JPG':
             find_rect_contour(fname)
