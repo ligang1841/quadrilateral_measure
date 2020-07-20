@@ -1,4 +1,7 @@
 /doc
 /.idea
 /__pycache__
-
+/build
+/dist
+/img_yellow
+/output
