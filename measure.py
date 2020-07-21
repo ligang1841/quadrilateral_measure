@@ -413,10 +413,11 @@ if __name__ == '__main__':
         if len(sys.argv)>=4:
             save_dir = sys.argv[3]
             if not os.path.isdir(save_dir):
-                os.system('mkdir -p ' + save_dir)
-                if os.path.isdir(save_dir):
+                #os.system('mkdir -p ' + save_dir)
+                os.mkdir(save_dir)
+                if not os.path.isdir(save_dir):
                     print('can not create path: ' + save_dir)
-                    exit(1)
+                    sys.exit(1)
             if save_dir[-1:] != '/' or save_dir[-1:] != '\\':
                 save_dir = save_dir + '/'
         else:
@@ -464,31 +465,31 @@ if __name__ == '__main__':
             is_save = False
             is_data = True
             is_show = False
-            imgpath = imgname
+            img_dir = imgname
             
             ### batch image dir
-            if imgpath[-1:]!='/' or imgpath[-1:]!='\\':
-                img_dir = imgpath + '/'
+            if img_dir[-1:]!='/' or img_dir[-1:]!='\\':
+                img_dir = img_dir + '/'
             else:
-                img_dir = imgpath
+                img_dir = img_dir
 
             while True:
                 img_list = os.listdir(img_dir)
                 for subimgname in img_list:
                     if subimgname[-4:]=='.jpg' or subimgname[-4:]=='.JPG':
-                        headpoints = find_rect_contour(imgpath + subimgname)
+                        headpoints = find_rect_contour(img_dir + subimgname)
                         if headpoints is not None:
                             endtime = time.time()
                             duration= endtime - begintime
                             print(subimgname + ' : ' + str(colour_num))
-                            print('calc-time={:0.4f} sec'.format(duration))
+                            #print('calc-time={:0.4f} sec'.format(duration))
                             print(headpoints)
                             print()
                             begintime = endtime
                             
                         if os.path.isfile(save_dir + subimgname):
                             shutil.remove(save_dir + subimgname)
-                        shutil.move(imgpath + subimgname,save_dir + subimgname)
+                        shutil.move(img_dir + subimgname,save_dir + subimgname)
                     elif imgname=='end-program':
                         sys.exit(0)
                 time.sleep(0.5)
