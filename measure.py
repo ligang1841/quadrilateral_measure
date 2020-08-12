@@ -1,24 +1,18 @@
-import os,sys,shutil
+import os,sys
 import cv2
 import numpy as np
 import imutils
 import copy
 import configparser
 import platform
-import time
 
-import warnings
-warnings.filterwarnings('ignore')
+is_debug=False
 
-### global setting
-img_dir = './img_yellow/'
+#cyan colour
 hsv_low = np.array([90,60,120]) # 90,160,150
 hsv_high = np.array([105,250,250]) # 100,250,240
-is_show = True
-is_save = False
-is_data = True # command line show 4-cornel axis (x,y) data
 
-### os check
+img_dir = './img_yellow/'
 os_name=platform.system()
 if os_name == 'Windows':
     save_dir = './output/'
@@ -26,10 +20,12 @@ elif os_name == 'Linux':
     save_dir = '/dev/shm/measure/'
 else:
     print('unknown os: ' + os_name)
-    print('this version support debian 9+ and ubuntu 18+ and windows 7+ OS')
-    sys.exit(1)
+    exit(1)
 
-### -------------------------------------------------------------
+is_show = True
+is_save = False
+is_data = True # command line show 4-cornel axis (x,y) data
+
 def im_draw(title,im):
     if not is_show:
         return
@@ -47,7 +43,11 @@ def im_draw(title,im):
     key = cv2.waitKey()
     cv2.destroyAllWindows()
     if key == 27:
-        sys.exit(2)
+        sys.exit()
+
+def debug_draw(title,im):
+    if is_debug:
+        im_draw(title,im)
 
 # pts = [4,1,2]
 def im_draw_rect(im,pts):
@@ -78,8 +78,6 @@ def im_draw_pt(im,pts):
         y = pts[1][i]
         im = cv2.circle(im,(x,y),3,(0,255,255),1)
 
-
-### ==========================================================
 def enhance_colour(im):
     # rgb:
     #lower_rgb = np.array([60, 150, 180])
@@ -97,20 +95,12 @@ def enhance_img(im):
     #im_draw('origin',im)
     im = cv2.GaussianBlur(im, (9, 9), 0)
     im_gray = enhance_colour(im)
+    debug_draw('enhanced colour',im_gray)
+
     im_gray = cv2.medianBlur(im_gray, 7, 0)
     im_gray = im_gray.astype(np.uint8)
 
-    #im_draw('enhance_img',im_gray)
     return im_gray
-
-
-
-def approx_fit_quadrilateral(contour):
-    # fit quadrilateral
-    epsilon = 0.1*cv2.arcLength(contour,True)
-    approx_points = cv2.approxPolyDP(contour,epsilon,True)
-    return approx_points
-
 
 
 def get_max_contour(im_th):
@@ -124,11 +114,18 @@ def get_max_contour(im_th):
         return max_c
 
 
+def approx_fit_quadrilateral(contour):
+    # fit quadrilateral
+    epsilon = 0.1*cv2.arcLength(contour,True)
+    approx_points = cv2.approxPolyDP(contour,epsilon,True)
+    return approx_points
+
+
 def get_max_threshold_img(im_gray,l1,l2): # 100,150
     _,thres = cv2.threshold(im_gray,l1,255,cv2.THRESH_BINARY)
     thres = np.where(thres<l2, 0, thres)
 
-    #im_draw('thres',thres)
+    debug_draw('thres',thres)
 
     # get max contour
     c = get_max_contour(thres)
@@ -309,70 +306,56 @@ def find_left_top(head_pts):
 
 
 def find_rect_contour(img_name):
-    bgtime = time.time()
+    #img = cv2.imread(img_dir + img_name)
     img = cv2.imread(img_name)
-    #hi = int(img.shape[0]/2)
-    #wi = int(img.shape[1]/2)
-    #img = cv2.resize(img,(wi,hi))
-    edtime = time.time()
-    #print('read time={}'.format(edtime - bgtime))
-
-    
+    if img is None:
+        print('no img:',img_name)
+        sys.exit(10)
     # enhance colour image, and get gray
-    bgtime=edtime
     gray = enhance_img(img)
-    edtime = time.time()
-    #print('enhance img time={}'.format(edtime - bgtime))
-    
+
     # get threshold image and max contour
-    bgtime=edtime
     th,max_contour = get_max_threshold_img(gray,80,150)
     if th is None:
         return None
-    edtime = time.time()
-    #print('get threshold time={}'.format(edtime - bgtime))
-    
+
     # get 4-corner points
-    bgtime=edtime
     approx = approx_fit_quadrilateral(max_contour)
     if approx.shape != (4,1,2):
         return None # color error
-    edtime = time.time()
-    #print('approxite 4 corner time={}'.format(edtime - bgtime))
+    #im_draw_rect(img,approx)
+
 
     # get outer quatrilateral
-    bgtime=edtime
     points = get_edge(th.shape,max_contour,approx)
-    edtime = time.time()
-    #print('get 4 edges time={}'.format(edtime - bgtime))
-    
+
     # get 4 points
-    bgtime=edtime
     head_points = get_4_points_by_fit_lines(points,img)
-    edtime = time.time()
-    #print('get 4 points axis time={}'.format(edtime - bgtime))
-    
+
+    # get left-top-index
+    #i = find_left_top(head_points)
+    #print(i)
+
     #th3 = np.dstack([th, th, th])
-    if is_show or is_save:
-        for i in range(4):
-            j=(i+1)%4
-            x0 = int(head_points[i][0])
-            y0 = int(head_points[i][1])
-            x1 = int(head_points[j][0])
-            y1 = int(head_points[j][1])
-            cv2.line(img,(x0,y0),(x1,y1),(0,255,0),1,4)
+    for i in range(4):
+        j=(i+1)%4
+        x0 = int(head_points[i][0])
+        y0 = int(head_points[i][1])
+        x1 = int(head_points[j][0])
+        y1 = int(head_points[j][1])
+        cv2.line(img,(x0,y0),(x1,y1),(0,255,0),1,4)
 
-            round_x = round(head_points[i][0],4)
-            round_y = round(head_points[i][1],4)
-            coor = "{:0.4f} x {:0.4f}".format(round_x,round_y)
-            cv2.putText(img,coor, (x0, y0-5), cv2.FONT_HERSHEY_COMPLEX, 0.75, (255, 255, 255), 1)
+        round_x = round(head_points[i][0],4)
+        round_y = round(head_points[i][1],4)
+        coor = "{:0.4f} x {:0.4f}".format(round_x,round_y)
+        cv2.putText(img,coor, (x0, y0-5), cv2.FONT_HERSHEY_COMPLEX, 0.75, (255, 255, 255), 1)
 
-        ### show HSV on corner
-        msg = 'HSV: {:d}, {:d}, {:d} to {:d}, {:d}, {:d}'.format(
-            hsv_low[0],hsv_low[1],hsv_low[2],
-            hsv_high[0],hsv_high[1],hsv_high[2]
-        )
-        cv2.putText(img, msg, (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 1)
+    ### show HSV on corner
+    msg = 'HSV: {:d}, {:d}, {:d} to {:d}, {:d}, {:d}'.format(
+        hsv_low[0],hsv_low[1],hsv_low[2],
+        hsv_high[0],hsv_high[1],hsv_high[2]
+    )
+    cv2.putText(img, msg, (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 1)
 
     # show
     if is_show:
@@ -390,47 +373,42 @@ def find_rect_contour(img_name):
 
 if __name__ == '__main__':
 
-    begintime = time.time()
-
-
     if len(sys.argv)==2:
         if sys.argv[1]=='-v' or sys.argv[1]=='--version':
-            print('measure ver 1.0.3')
+            print('measure ver 1.0.1')
             sys.exit(0)
         elif sys.argv[1]=='-h' or sys.argv[1]=='--help':
             print('measure -h or measure --help to see this help')
-            print('measure -v or measure --version to see version\n')
+            print('measure -v or measure --version to see version')
+            print('measure <imagename|imagepath>  <show|data|save> [output_dir]')
             print('measure <imagename|imagepath>  <show|data|save> [output_dir]')
             print('    imagename : one image name, suffix is jpg or JPG')
-            print('    show : show image with label axis (x,y)')
-            print('    data : output 4 points axis in console')
-            print('    save : save analysis image to output dir you are given')
-        sys.exit(0)
-    elif len(sys.argv)>=3:
+            print('    imagepath : image path, will process all images in the path')
+            print()
+            print('    show : show image with mark axis')
+            print('    data : output 4 points axis in float')
+            print('    save : save analysis image to ./output/')
+    elif len(sys.argv)==3:
         imgname = sys.argv[1]
         is_show = sys.argv[2] =='show'
         is_save = sys.argv[2] =='save'
-        if len(sys.argv)>=4:
+        if is_save and len(sys.argv)>=4:
             save_dir = sys.argv[3]
             if not os.path.isdir(save_dir):
-                #os.system('mkdir -p ' + save_dir)
-                os.mkdir(save_dir)
-                if not os.path.isdir(save_dir):
+                os.system('mkdir -p ' + save_dir)
+                if os.path.isdir(save_dir):
                     print('can not create path: ' + save_dir)
-                    sys.exit(1)
+                    exit(1)
             if save_dir[-1:] != '/' or save_dir[-1:] != '\\':
                 save_dir = save_dir + '/'
         else:
             if not os.path.isdir(save_dir):
                 os.mkdir(save_dir)
     else:
-        print('usage: measure <imagename> [show|save|data]')
-        print('more help: measure -h')
+        print('usage: measure <imagename|imagepath> [show|save|data]')
         sys.exit(1)
 
-
     ### read config hsv low and high
-    
     configParser = configparser.RawConfigParser()
     configFilePath = r'm_config.txt'
     configParser.read(configFilePath, encoding="utf-8-sig")
@@ -441,6 +419,7 @@ if __name__ == '__main__':
     item_colours = item_colours.split((','))
 
     for item_colour in item_colours:
+        print('try ',item_colour)
         item = item_colour
         tmp = configParser.get(item, 'low')
         tmp = tmp.split(',')
@@ -448,51 +427,15 @@ if __name__ == '__main__':
 
         tmp = configParser.get(item, 'high')
         tmp = tmp.split(',')
-        hsv_high = np.array([int(int(tmp[0])/2+1), int(int(tmp[1])*2.55), int(int(tmp[2])*2.55)])
+        hsv_high = np.array([int(int(tmp[0])/2), int(int(tmp[1])*2.55+1), int(int(tmp[2])*2.55+1)])
 
         colour_num=1
         if os.path.isfile(imgname):
             headpoints = find_rect_contour(imgname)
             if headpoints is not None:
-                endtime = time.time()
-                duration= endtime - begintime
-                print(imgname + ' : ' + str(colour_num)+ ', calc time={:0.4f} sec'.format(duration))
+                print(imgname + ' : ' + str(colour_num))
                 print(headpoints)
                 sys.exit(0)
-
-        
-        elif os.path.isdir(imgname): # infinit loop for read image and analysis
-            is_save = False
-            is_data = True
-            is_show = False
-            img_dir = imgname
-            
-            ### batch image dir
-            if img_dir[-1:]!='/' or img_dir[-1:]!='\\':
-                img_dir = img_dir + '/'
-            else:
-                img_dir = img_dir
-
-            while True:
-                img_list = os.listdir(img_dir)
-                for subimgname in img_list:
-                    if subimgname[-4:]=='.jpg' or subimgname[-4:]=='.JPG':
-                        headpoints = find_rect_contour(img_dir + subimgname)
-                        if headpoints is not None:
-                            endtime = time.time()
-                            duration= endtime - begintime
-                            print(subimgname + ' : ' + str(colour_num))
-                            #print('calc-time={:0.4f} sec'.format(duration))
-                            print(headpoints)
-                            print()
-                            begintime = endtime
-                            
-                        if os.path.isfile(save_dir + subimgname):
-                            shutil.remove(save_dir + subimgname)
-                        shutil.move(img_dir + subimgname,save_dir + subimgname)
-                    elif imgname=='end-program':
-                        sys.exit(0)
-                time.sleep(0.5)
 
     ### no found and exit
     print(imgname + ' : 0')

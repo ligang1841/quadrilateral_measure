@@ -9,15 +9,15 @@
 colour=yellow,cyan,orange
 
 [yellow]
-low  = 44,36,50
-high = 54,100,84
+low  = 44,36,10
+high = 62,100,95
 
 [cyan]
-low  = 90,120,125
-high = 105,240,210
+low  = 45,48,50
+high = 53,96,84
 
 [orange]
-low  = 5,130,82
-high = 11,240,250
+low  = 2,52,32
+high = 6,96,100
 
 
