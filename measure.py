@@ -33,7 +33,7 @@ def im_draw(title,im):
     h = im.shape[0]
     w = im.shape[1]
     if w>1280 or h >960:
-        scalesize = min(w/1280,h/960)
+        scalesize = max(w/1280,h/960)
         w /= scalesize
         h /= scalesize
         w = int(w)
@@ -412,7 +412,7 @@ if __name__ == '__main__':
     configParser = configparser.RawConfigParser()
     configFilePath = r'm_config.txt'
     configParser.read(configFilePath, encoding="utf-8-sig")
-    config_data = {}
+    #config_data = {}
 
     item = 'type'
     item_colours = configParser.get(item, 'colour')

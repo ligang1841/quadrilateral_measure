@@ -3,5 +3,7 @@
 /__pycache__
 /build
 /dist
+/image
 /img_yellow
 /output
+/gap
