@@ -1,6 +1,13 @@
 # quadrilateral_measure
 
 <<<<<<< HEAD
+gap寻找裂缝
+返回错误值
+ERR：1  命令行参数错
+ERR：2  配置文件错
+
+
+Measure测量四边形
 find image's specified coloured quadrilateral's 4 precise corners
 
 1 smooth: gaussion smooth with kernel 5x5 is better

@@ -6,8 +6,8 @@ import numpy as np
 import configparser
 
 ### ================= global var ==========================
-is_show = True
-is_save = False
+is_show = False
+is_save = True
 ori_im = None
 #ori_im = cv2.imread('./gap/gap_sample.jpg')
 
@@ -280,7 +280,6 @@ def batch_images(img_path):
 ### one image
 def calc_image(img_info):
     argc = len(img_info)
-    print("argc=",argc)
     if argc == 2:
         iname = img_info[1]
     elif argc == 6:
@@ -290,8 +289,8 @@ def calc_image(img_info):
         x_w = int(img_info[4])
         y_h = int(img_info[5])
     else:
-        print("param: image-name")
-        print("param: image-name x y w h")
+        print("gap <gap-image-file.jpg>")
+        print("gap <gap-image-file.jpg> [x y w h]")
         return"ERR:1" # params numbers err
 
     ### read config
@@ -310,7 +309,7 @@ def calc_image(img_info):
         return "ERR:2" # config setup error
 
     global is_show, is_save
-    is_show = bool(conf.get(item, 'is_review'))
+    is_show = int(conf.get(item, 'is_review'))==1
     is_save = conf.get(item, 'is_save')
 
     global ori_im
@@ -396,7 +395,10 @@ def calc_image(img_info):
 
 ### ======= main =======
 if __name__ == '__main__':
-    if os.path.isfile(sys.argv[1]):
+    if len(sys.argv)==1:
+        print("gap <gap-image-file.jpg>")
+        print("gap <gap-image-file.jpg> [x y w h]")
+    elif os.path.isfile(sys.argv[1]):
         ret = calc_image(sys.argv) # have [img_name, x, y, x_w, y_h] input
         sys.exit(ret)
     else:
