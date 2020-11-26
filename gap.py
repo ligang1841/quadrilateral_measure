@@ -279,23 +279,35 @@ def batch_images(img_path):
 
 ### one image
 def calc_image(img_info):
-    iname = img_info[1]
-    x = int(img_info[2])
-    y = int(img_info[3])
-    x_w = int(img_info[4])
-    y_h = int(img_info[5])
+    argc = len(img_info)
+    print("argc=",argc)
+    if argc == 2:
+        iname = img_info[1]
+    elif argc == 6:
+        iname = img_info[1]
+        x = int(img_info[2])
+        y = int(img_info[3])
+        x_w = int(img_info[4])
+        y_h = int(img_info[5])
+    else:
+        print("param: image-name")
+        print("param: image-name x y w h")
+        return"ERR:1" # params numbers err
 
     ### read config
-    conf = configparser.RawConfigParser()
-    configFilePath = r'gap_config.txt'
-    conf.read(configFilePath, encoding="utf-8-sig")
-    #config_data = {}
+    try:
+        conf = configparser.RawConfigParser()
+        configFilePath = r'gap_config.txt'
+        conf.read(configFilePath, encoding="utf-8-sig")
+        #config_data = {}
 
-    item='config'
-    histpercent = float(conf.get(item, 'histpercent')) # 0.1 e.g.
-    img_type = conf.get(item, 'img_type') # *.jpg or *.png
-    ksize = int(conf.get(item, 'dilate_ksize')) # 1,3,5,7 ... default =3
-    max_contours = int(conf.get(item, 'max_contours')) # 1,2,3 ... default =3
+        item='config'
+        histpercent = float(conf.get(item, 'histpercent')) # 0.1 e.g.
+        img_type = conf.get(item, 'img_type') # *.jpg or *.png
+        ksize = int(conf.get(item, 'dilate_ksize')) # 1,3,5,7 ... default =3
+        max_contours = int(conf.get(item, 'max_contours')) # 1,2,3 ... default =3
+    except:
+        return "ERR:2" # config setup error
 
     global is_show, is_save
     is_show = bool(conf.get(item, 'is_review'))
@@ -303,8 +315,21 @@ def calc_image(img_info):
 
     global ori_im
     ori_im = cv2.imread(iname)
+    if ori_im.shape[1]>ori_im.shape[0]:
+        ori_im = np.rot90(ori_im,-1) # -1: right rot, clockwise 90
+        is_rot=90
+    else:
+        is_rot=0
+
+    if argc==2:
+        x=0
+        y=0
+        x_w=ori_im.shape[1]
+        y_h=ori_im.shape[0]
+
     rect_im = ori_im[y:y_h,x:x_w]
     im_gray = enhance_img(rect_im)
+
 
 
     im_histed = thresholded_img(im_gray, histpercent)
@@ -312,19 +337,25 @@ def calc_image(img_info):
     im_contour = find_contours(im_dilate, max_contours)
 
     if is_show:
-        im_draw(im_contour, iname)
+        if is_rot==0:
+            im_draw(im_contour, iname)
+        else:
+            ori_contour = np.rot90(im_contour, 1)
+            im_draw(ori_contour, iname)
 
     if is_save != 'none':
         _, g, _ = cv2.split(im_contour)
         g[g > 1] = 1
 
         if is_save == 'mat':
-            np.savetxt(iname + '.mat', g, fmt='%2d')
+            np.savetxt(iname + '.mat', g, fmt='%d')
         elif is_save == 'rle':
             # save to RLE format
             col_num = g.shape[1]
             row_count = 0
+            # image info
             txt = 'x1={:d},y1={:d},x2={:d},y2={:d}\n'.format(x,y,x_w,y_h)
+            txt = ''
             for row in g:
                 row[0] = 0
                 row[col_num - 1] = 0
@@ -334,11 +365,17 @@ def calc_image(img_info):
                         b = num
                     elif row[num] == 1 and row[num + 1] == 0:
                         lens = num - b + 1
-                        txt += 'row={:d},begin={:d},len={:d}\n'.format(row_count, b, lens)
+                        if is_rot==0:
+                            txt += 'row={:d},begin={:d},len={:d}\n'.format(row_count, b, lens)
+                        else:
+                            txt += 'col={:d},begin={:d},len={:d}\n'.format(row_count, b, lens)
                 row_count += 1
                 #print(row_count)
             if is_save == 'rle':
-                txtname = '{:s}.{:d}x{:d}.{:d}x{:d}.txt'.format(iname[:-4], x, y, x_w, y_h)
+                ### axis name of txt
+                #txtname = '{:s}.{:d}x{:d}.{:d}x{:d}.txt'.format(iname[:-4], x, y, x_w, y_h)
+                ### same image-txt name (paired)
+                txtname = iname[:-3] + 'txt'
                 with open(txtname, 'w') as f:
                     f.write(txt)
 
@@ -348,14 +385,19 @@ def calc_image(img_info):
             np.savez_compressed(iname + '.npz', g)
 
         ### save added rect image
+        # NOW, no need cut small image from a big image
+        """
         add_rect_img = cv2.rectangle(ori_im,(x,y),(x_w,y_h),color=(0,0,255),thickness=2)
         rect_img_name = '{:s}.{:d}x{:d}.{:d}x{:d}.jpg'.format(iname[:-4], x, y, x_w, y_h)
         cv2.imwrite(rect_img_name, add_rect_img)
+        """
 
+        return "OK"
 
 ### ======= main =======
 if __name__ == '__main__':
     if os.path.isfile(sys.argv[1]):
-        calc_image(sys.argv) # have [img_name, x, y, x_w, y_h] input
+        ret = calc_image(sys.argv) # have [img_name, x, y, x_w, y_h] input
+        sys.exit(ret)
     else:
         batch_images(sys.argv[1])
