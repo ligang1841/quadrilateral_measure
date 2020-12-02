@@ -36,7 +36,7 @@ def im_draw(im, title='no title',merge=False):
     r=0.3
     if merge:
         img = cv2.addWeighted(im_bg,r,im,1.0-r,0)
-        print('merge image show')
+        #print('merge image show')
     else:
         img = im
     cv2.imshow(title, img)
@@ -173,7 +173,7 @@ def find_connection_domain(img):
 
     ###查看各个返回值
     # 连通域数量
-    print('num_labels = ', num_labels)
+    #print('num_labels = ', num_labels)
 
     ###连通域的信息：对应各个轮廓的x、y、width、height和面积
     #print('st:  x      y     w     h     area')
@@ -267,7 +267,7 @@ def batch_images(img_path):
                             lens = num - b +1
                             txt += 'row={:d},begin={:d},len={:d}\n'.format(row_count, b, lens)
                     row_count +=1
-                    print(row_count)
+                    #print(row_count)
                 if is_save=='rle':
                     with open(iname[:-4] +'.txt','w') as f:
                         f.write(txt)
@@ -289,10 +289,13 @@ def calc_image(img_info):
         x_w = int(img_info[4])
         y_h = int(img_info[5])
     else:
-        print("gap <gap-image-file.jpg>")
-        print("gap <gap-image-file.jpg> [x y w h]")
-        return"ERR:1" # params numbers err
+        return "ERR:1" # params numbers err
 
+    global ori_im
+    ori_im = cv2.imread(iname)
+    if ori_im is None:
+        return "ERR:3" # not an image
+        
     ### read config
     try:
         conf = configparser.RawConfigParser()
@@ -312,8 +315,7 @@ def calc_image(img_info):
     is_show = int(conf.get(item, 'is_review'))==1
     is_save = conf.get(item, 'is_save')
 
-    global ori_im
-    ori_im = cv2.imread(iname)
+        
     if ori_im.shape[1]>ori_im.shape[0]:
         ori_im = np.rot90(ori_im,-1) # -1: right rot, clockwise 90
         is_rot=90
@@ -398,7 +400,7 @@ if __name__ == '__main__':
     if len(sys.argv)==1:
         print("gap <gap-image-file.jpg>")
         print("gap <gap-image-file.jpg> [x y w h]")
-    elif os.path.isfile(sys.argv[1]):
+    elif len(sys.argv)>=2:
         ret = calc_image(sys.argv) # have [img_name, x, y, x_w, y_h] input
         sys.exit(ret)
     else:

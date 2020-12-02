@@ -5,7 +5,7 @@ gap寻找裂缝
 返回错误值
 ERR：1  命令行参数错
 ERR：2  配置文件错
-
+ERR:3  图像文件不存在
 
 Measure测量四边形
 find image's specified coloured quadrilateral's 4 precise corners
